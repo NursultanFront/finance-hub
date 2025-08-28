@@ -61,17 +61,22 @@ libs/
 ### Создание новых проектов:
 
 ```bash
-# Feature библиотеки
-nx g @nx/angular:library --name=feature-profile --directory=libs/feature --tags=type:feature
+# Feature библиотеки (финансовые фичи)
+nx g @nx/angular:library --name=feature-finance --directory=libs/feature --tags=type:feature,domain:finance
+nx g @nx/angular:library --name=feature-dashboard --directory=libs/feature --tags=type:feature,domain:finance
 
-# UI библиотеки
+# UI библиотеки (отдельные компоненты)
 nx g @nx/angular:library --name=ui-button --directory=libs/ui --tags=type:ui
+nx g @nx/angular:library --name=ui-card --directory=libs/ui --tags=type:ui
+nx g @nx/angular:library --name=ui-input --directory=libs/ui --tags=type:ui
+nx g @nx/angular:library --name=ui-modal --directory=libs/ui --tags=type:ui
 
-# Data-access библиотеки  
-nx g @nx/angular:library --name=data-access-auth --directory=libs/data-access --tags=type:data-access
+# Data-access библиотеки (для финансов)
+nx g @nx/angular:library --name=data-access-finance --directory=libs/data-access --tags=type:data-access,domain:finance
 
-# Utility библиотеки
-nx g @nx/angular:library --name=util-date --directory=libs/util --tags=type:util
+# Utility библиотеки (общие утилиты)
+nx g @nx/angular:library --name=util-common --directory=libs/util --tags=type:util
+nx g @nx/angular:library --name=util-currency --directory=libs/util --tags=type:util
 ```
 
 ### Создание приложений:
