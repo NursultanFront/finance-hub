@@ -1,82 +1,229 @@
-# FinanceHub
+# Monorepo Guidelines
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+Этот репозиторий использует **Nx** для организации кода и управления зависимостями.  
+Здесь собраны приложения (`apps/`) и библиотеки (`libs/`), сгруппированные по бизнес-доменам.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is almost ready ✨.
+---
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/getting-started/tutorials/angular-monorepo-tutorial?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+## 📂 Структура папок
 
-## Finish your CI setup
+```
+apps/                # конечные приложения (Angular, React, Node)
+  hub-shell/         # основное PWA приложение
+  finance/           # микрофронтенд для финансов
 
-[Click here to finish setting up your workspace!](https://cloud.nx.app)
-
-
-## Run tasks
-
-To run the dev server for your app, use:
-
-```sh
-npx nx serve hub-shell
+libs/
+  feature/           # бизнес-фичи (контейнерные компоненты, страницы)
+  ui/                # UI-библиотеки (только презентационные компоненты)
+  data-access/       # доступ к данным (API, state management)
+  util/              # утилиты и хелперы
+  shared/            # общее для нескольких приложений
 ```
 
-To create a production bundle:
+- **Feature** — реализуют бизнес-кейсы/страницы, могут использовать все остальные типы.
+- **UI** — содержат только презентационные компоненты, без логики работы с данными.
+- **Data-access** — содержат код доступа к API + state management.
+- **Util** — переиспользуемые функции, константы, хелперы.
 
-```sh
-npx nx build hub-shell
+---
+
+## 🛡️ Правила зависимостей
+
+Мы используем правило ESLint `@nx/enforce-module-boundaries` для строгой архитектуры.  
+Каждый проект имеет теги (`tags`) в `project.json`:
+
+- `"tags": ["type:feature"]`
+- `"tags": ["type:ui"]`  
+- `"tags": ["type:data-access"]`
+- `"tags": ["type:util"]`
+
+### Матрица зависимостей
+
+| From → To      | Feature | UI  | Data | Util |
+|----------------|---------|-----|------|------|
+| **Feature**    | ✅      | ✅  | ✅   | ✅   |
+| **UI**         | ❌      | ✅  | ❌   | ✅   |
+| **Data-access**| ❌      | ❌  | ✅   | ✅   |
+| **Util**       | ❌      | ❌  | ❌   | ✅   |
+
+- ✅ — разрешено  
+- ❌ — запрещено
+
+Примеры:
+- `ui/button` **не может** импортировать `data-access/auth`.
+- `data-access/orders` **не может** использовать `ui/table`.
+- `feature/profile` **может** импортировать всё.
+
+---
+
+## ⚙️ Генераторы Nx
+
+### Создание новых проектов:
+
+```bash
+# Feature библиотеки
+nx g @nx/angular:library --name=feature-profile --directory=libs/feature --tags=type:feature
+
+# UI библиотеки
+nx g @nx/angular:library --name=ui-button --directory=libs/ui --tags=type:ui
+
+# Data-access библиотеки  
+nx g @nx/angular:library --name=data-access-auth --directory=libs/data-access --tags=type:data-access
+
+# Utility библиотеки
+nx g @nx/angular:library --name=util-date --directory=libs/util --tags=type:util
 ```
 
-To see all available targets to run for a project, run:
+### Создание приложений:
 
-```sh
-npx nx show project hub-shell
+```bash
+# Основное приложение
+nx g @nx/angular:app --name=hub-shell --routing=true --style=scss --standalone=true
+
+# Микрофронтенд
+nx g @nx/angular:app --name=finance --routing=true --style=scss --standalone=true
 ```
 
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
+### Создание компонентов:
 
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+```bash
+# В конкретной библиотеке
+nx g @nx/angular:component --name=button --project=ui-components --standalone=true
 
-## Add new projects
-
-While you could add new projects to your workspace manually, you might want to leverage [Nx plugins](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) and their [code generation](https://nx.dev/features/generate-code?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) feature.
-
-Use the plugin's generator to create new projects.
-
-To generate a new application, use:
-
-```sh
-npx nx g @nx/angular:app demo
+# В feature библиотеке
+nx g @nx/angular:component --name=dashboard --project=feature-finance --standalone=true
 ```
 
-To generate a new library, use:
+### Управление проектами:
 
-```sh
-npx nx g @nx/angular:lib mylib
+```bash
+# Перемещение проекта
+nx g @nx/workspace:move --project=old-name --destination=new-location/new-name
+
+# Удаление проекта  
+nx g @nx/workspace:remove --project=project-name
 ```
 
-You can use `npx nx list` to get a list of installed plugins. Then, run `npx nx list <plugin-name>` to learn about more specific capabilities of a particular plugin. Alternatively, [install Nx Console](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) to browse plugins and generators in your IDE.
+---
 
-[Learn more about Nx plugins &raquo;](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) | [Browse the plugin registry &raquo;](https://nx.dev/plugin-registry?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+## 📊 Визуализация зависимостей
 
+- Построить граф проектов:
+```bash
+nx graph
+```
 
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+- Построить граф задач (например, для build):
+```bash
+nx build my-app --graph
+```
 
-## Install Nx Console
+- Показать затронутые проекты:
+```bash
+nx affected:graph
+```
 
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
+---
 
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+## 🚀 Команды для разработки
 
-## Useful links
+### Запуск приложений:
 
-Learn more:
+```bash
+# Основное приложение
+nx serve hub-shell
 
-- [Learn more about this workspace setup](https://nx.dev/getting-started/tutorials/angular-monorepo-tutorial?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+# Микрофронтенд
+nx serve finance
 
-And join the Nx community:
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+# Все приложения параллельно
+nx run-many --target=serve --projects=hub-shell,finance --parallel
+```
+
+### Сборка:
+
+```bash
+# Одно приложение
+nx build hub-shell
+
+# Все приложения
+nx run-many --target=build --projects=hub-shell,finance
+
+# Только затронутые изменениями
+nx affected:build
+```
+
+### Тестирование:
+
+```bash
+# Все тесты
+nx run-many --target=test --all
+
+# Только затронутые
+nx affected:test
+
+# Конкретная библиотека
+nx test ui-components
+```
+
+### Линтинг:
+
+```bash
+# Все проекты
+nx run-many --target=lint --all
+
+# Только затронутые
+nx affected:lint
+
+# Конкретный проект
+nx lint feature-finance
+```
+
+---
+
+## 📦 Настройка Module Federation
+
+Для микрофронтендов:
+
+```bash
+# Установка зависимостей
+npm install @nx/webpack --save-dev
+
+# Настройка host приложения
+nx g @nx/angular:setup-mf hub-shell --mfType=host --routing=true
+
+# Настройка remote приложения
+nx g @nx/angular:setup-mf finance --mfType=remote --host=hub-shell --routing=true
+```
+
+---
+
+## 🔧 PWA настройка
+
+```bash
+# Добавление PWA к приложению
+nx g @angular/pwa:pwa --project=hub-shell
+```
+
+---
+
+## 🌐 Internationalization
+
+```bash
+# Установка Transloco
+npm install @jsverse/transloco @jsverse/transloco-messageformat --save
+
+# Добавление к проекту
+nx g @jsverse/transloco:ng-add --project=hub-shell
+```
+
+---
+
+## ✅ Резюме
+
+- Код делим по бизнес-доменам и слоям (`feature`, `ui`, `data-access`, `util`).
+- Используем **теги** и правило `enforce-module-boundaries`.
+- Генераторы Nx помогают создавать, перемещать и удалять проекты.
+- Граф зависимостей (`nx graph`) всегда показывает актуальную архитектуру.
+- Module Federation для микрофронтендов.
+- PWA и i18n поддержка из коробки.
